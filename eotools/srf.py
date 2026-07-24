@@ -137,7 +137,7 @@ def get_SRF(
 
 def get_SRF_eumetsat(id_sensor: str = "") -> xr.Dataset:
     """
-    Download and read Specrtral Response Function (SRF) from EUMETSAT database
+    Download and read Spectral Response Function (SRF) from EUMETSAT database
     -> https://nwp-saf.eumetsat.int/site/software/rttov/download/coefficients/spectral-response-functions/
 
     Args:
@@ -318,7 +318,7 @@ def filter_bands(
     srf: xr.Dataset,
     wav_min: float | None = None,
     wav_max: float | None = None,
-    use_cwav: bool = False,
+    use_cwav: bool = True,
 ) -> xr.Dataset:
     """
     Filter the bands in `srf` to keep only the bands defined between `wav_min` and `wav_max`
@@ -598,6 +598,10 @@ def integrate_srf(
                     f"resample='x' or resample='srf'. Here, resample={resample}")
         else:
             raise TypeError(f"Error, x is of type {x.__class__}")
+
+        # Fill NaNs in the wav coordinate to avoid NaN propagation in simpson
+        wav = wav.fillna(0.)
+        xx = xx.fillna(0.)
 
         def integrate_dataset(y: xr.DataArray, x: xr.DataArray) -> xr.DataArray:
             """Wraps integration function for xarray datasets."""

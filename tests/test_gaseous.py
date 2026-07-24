@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict
-
 import numpy as np
 import pytest
 import xarray as xr
 from core.tests.conftest import savefig
+from core.tests.pytest_utils import parametrize_dict
 from matplotlib import pyplot as plt
 from eotools.gaseous_absorption import (
     gas_list_gatiab,
@@ -94,23 +93,43 @@ def get_x_range(
 
 @pytest.mark.skipif(not GATIAB_AVAILABLE, reason="gatiab not installed")
 @pytest.mark.parametrize(
-    "platform_sensor,sel", [
-        ("SENTINEL-3A_OLCI", {"ccd_col": 374, "camera": "FM7"}),
-        ("SENTINEL-3B_OLCI", {"ccd_col": 374, "camera": "FM7"}),
-        ("SENTINEL-2A_MSI", {}),
-        ("SENTINEL-2B_MSI", {}),
-        ("MSG-1_SEVIRI", {}),
-        ("MSG-2_SEVIRI", {}),
-        ("MSG-3_SEVIRI", {}),
-        ("MSG-4_SEVIRI", {}),
-        ("MTG-I1_FCI", {}),
-    ]
+    "platform_sensor,sel,kwargs",
+    **parametrize_dict(
+        {
+            "s3a_olci": ("SENTINEL-3A_OLCI", {"ccd_col": 374, "camera": "FM7"}, {}),
+            "s3b_olci": ("SENTINEL-3B_OLCI", {"ccd_col": 374, "camera": "FM7"}, {}),
+            "s2a_msi": ("SENTINEL-2A_MSI", {}, {}),
+            "s2b_msi": ("SENTINEL-2B_MSI", {}, {}),
+            "msg1_seviri": ("MSG-1_SEVIRI", {}, {}),
+            "msg2_seviri": ("MSG-2_SEVIRI", {}, {}),
+            "msg3_seviri": ("MSG-3_SEVIRI", {}, {}),
+            "msg4_seviri": ("MSG-4_SEVIRI", {}, {}),
+            "mtg_fci": ("MTG-I1_FCI", {}, {}),
+            "envisat_meris": ("ENVISAT_MERIS", {}, {}),
+            "aqua_modis": (
+                None,
+                {},
+                {
+                    "srf_getter": "eotools.srf.get_SRF_NASA",
+                    "srf_getter_arg": "aqua_modis",
+                },
+            ),
+            "snpp_viirs": (
+                None,
+                {},
+                {
+                    "srf_getter": "eotools.srf.get_SRF_NASA",
+                    "srf_getter_arg": "suomi-npp_viirs",
+                },
+            ),
+        }
+    ),
 )
-def test_all_gases(platform_sensor: str, sel: Dict, request):
+def test_all_gases(platform_sensor: str, sel: dict, kwargs, request):
     """
     Generate all coeffs for gatiab supported gases
     """
-    srf = filter_bands(get_SRF(platform_sensor), 250., 2500.)
+    srf = filter_bands(get_SRF(platform_sensor, **kwargs), 250., 2500.)
     srf = rename(srf, 'trim')
     srf = squeeze(select(srf, **sel))
     cwav = integrate_srf(srf, lambda x: x)
@@ -148,9 +167,10 @@ def test_all_gases(platform_sensor: str, sel: Dict, request):
         label="Total",
     )
 
+    plt.title(platform_sensor)
     plt.axis(ymin=0, ymax=1.01)
     plt.yticks([0, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0])
-    plt.ylabel('transmission')
+    plt.ylabel(r'$t_\text{gas}$')
     plt.xlabel('wavelength (nm)')
     plt.grid(True)
     plt.legend()

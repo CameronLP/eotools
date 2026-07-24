@@ -294,6 +294,7 @@ def transmission_model_single(
     """
     # Resample srf to T
     srf_bandname = only(srf_band.dims)
+    srf_band = srf_band.dropna(srf_bandname)
     srf_values = srf_band.interp({srf_bandname: T.wav})
     srf_values = srf_values.fillna(0.)
 
