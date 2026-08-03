@@ -87,11 +87,11 @@ def get_absorption(gaz: str, dirname: Optional[Union[str, Path]]=None):
 
     match gaz:
 
-        case "o3":
+        case "no2":
             txt_path = Path(__file__).parent/'auxdata/common/static/k_no2.txt'
             skiprows = 18
 
-        case "no2":
+        case "o3":
             txt_path = Path(__file__).parent/'auxdata/common/static/k_o3_anderson.txt'
             skiprows = 19
 
