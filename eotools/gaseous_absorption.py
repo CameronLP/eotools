@@ -61,6 +61,9 @@ def get_absorption(gaz: str, dirname: Optional[Union[str, Path]]=None):
     xr.DataArray
         1-D array of absorption values with a ``wav`` coordinate (nm).
     """
+
+    # 2026-08-03: Download links in absoprtion_MTL.csv are broken due to website migration
+    """
     file_absorption_MTL = Path(__file__).parent/'absorption_MTL.csv'
     if dirname is None:
         dirname = env.getdir("DIR_STATIC")/"common"
@@ -70,7 +73,7 @@ def get_absorption(gaz: str, dirname: Optional[Union[str, Path]]=None):
     skiprows = k_path[k_path['gaz'] == gaz]['skiprows'].values[0]
     if len(urlpath) == 0:
         raise FileNotFoundError(f'No corresponding file for gaz ({gaz})')
-    
+
     txt_path = download_url(urlpath.values[0], dirname, verbose=False)
     abs_rate = pd.read_csv(txt_path, skiprows=skiprows, 
                     engine='python', dtype=float,
@@ -79,6 +82,31 @@ def get_absorption(gaz: str, dirname: Optional[Union[str, Path]]=None):
     k = xr.DataArray(abs_rate['Value'].to_numpy(), dims=["wav"])
     k = k.assign_coords(wav=abs_rate['Wavelength'].to_numpy())
     k['wav'].attrs.update({"units": "nm"})
+    """
+
+
+    match gaz:
+
+        case "o3":
+            txt_path = Path(__file__).parent/'auxdata/common/static/k_no2.txt'
+            skiprows = 18
+
+        case "no2":
+            txt_path = Path(__file__).parent/'auxdata/common/static/k_o3_anderson.txt'
+            skiprows = 19
+
+        case _:
+            return None
+
+
+    abs_rate = pd.read_csv(txt_path, skiprows=skiprows, 
+                    engine='python', dtype=float,
+                    index_col=False, sep=' ',
+                    names=["Wavelength", "Value"])
+    k = xr.DataArray(abs_rate['Value'].to_numpy(), dims=["wav"])
+    k = k.assign_coords(wav=abs_rate['Wavelength'].to_numpy())
+    k['wav'].attrs.update({"units": "nm"})
+
 
     return k
 
