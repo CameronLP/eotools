@@ -127,7 +127,7 @@ def calc_odr(ds: xr.Dataset, srf: xr.Dataset | None = None) -> xr.DataArray:
     """
     altitude_m = convert(ds["altitude"], "m")
     if "surface_pressure" in ds:
-        pressure_hpa = convert(ds["surface"], "hPa")
+        pressure_hpa = convert(ds["surface_pressure"], "hPa")
         pressure_kind = "surface"
     else:
         pressure_hpa = convert(ds["sea_level_pressure"], "hPa")
@@ -346,7 +346,23 @@ class RayleighCorrection(BlockProcessor):
         self.dtype = dtype
         self.interpolator = Interpolator(
             self.rayleigh_lut,
-            odr=Linear("odr"),
+            # bounds="clip" (not the Linear default "error") specifically
+            # for odr: a computed Rayleigh optical depth can come out
+            # slightly outside the LUT's built [0, 0.4] range for a small
+            # number of pixels with bad/corrupted input data (e.g. a
+            # capture with a buffering artifact smearing part of the
+            # image - confirmed 2026-09-15 on koreanCalValJL_2026-08-23,
+            # where a few pixels produced a physically-impossible
+            # negative odr and hard-failed the whole capture instead of
+            # just those pixels). Clipping degrades gracefully to the
+            # LUT's nearest valid value for that handful of bad pixels,
+            # rather than discarding every other (good) pixel in the
+            # scene. The other axes (geometry, wind speed) are left at
+            # the default "error" - those come from well-constrained
+            # inputs and going out of bounds there is more likely a real
+            # problem worth surfacing, not this class of localized
+            # data-quality artifact.
+            odr=Linear("odr", bounds="clip"),
             mu_s=Linear("mus"),
             mu_v=Linear("muv"),
             raa=Linear("raa"),
